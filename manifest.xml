@@ -11,8 +11,8 @@
   <DisplayName DefaultValue="Booking Comparator"/>
   <Description DefaultValue="Compare Excel booking lists from two emails."/>
 
-  <IconUrl DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/assets/icon-128.png"/>
+  <IconUrl DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/icon-128.png"/>
   <SupportUrl DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/taskpane.html"/>
 
   <AppDomains>
@@ -82,9 +82,9 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://spitonoikokurhs.github.io/booking-comparator-addin/commands.html"/>
