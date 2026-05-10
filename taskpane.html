@@ -170,6 +170,23 @@ let currentItem=null;
 
 Office.onReady(info=>{
   if(info.host===Office.HostType.Outlook){
+    // Restore File A from localStorage if it exists
+    try{
+      const saved=localStorage.getItem('bookingComparatorFileA');
+      if(saved){
+        const parsed=JSON.parse(saved);
+        dataA=parsed.rows; fileAName=parsed.name;
+        document.getElementById('fileALoaded').style.display='block';
+        document.getElementById('card1').classList.add('loaded');
+        document.getElementById('num1').classList.add('done');
+        document.getElementById('sub1').style.display='none';
+        document.getElementById('subjA').textContent=parsed.subject||'';
+        document.getElementById('fromA').textContent=parsed.from||'';
+        document.getElementById('emailInfoA').style.display=parsed.from?'block':'none';
+        document.getElementById('fileALoaded').textContent='\u2713 '+parsed.name+' (saved) \u2014 now open the second email.';
+        rebuildHeaders();
+      }
+    }catch(e){}
     Office.context.mailbox.addHandlerAsync(
       Office.EventType.ItemChanged,
       onItemChanged
@@ -241,7 +258,14 @@ function loadAtt(side,attId,name){
     const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
     if(side==='A'){
       dataA=rows; fileAName=name;
+      // Save File A to localStorage so it survives email switches
+      try{
+        const subj=currentItem.subject||'';
+        const frm=currentItem.from?currentItem.from.displayName+' <'+currentItem.from.emailAddress+'>':'';
+        localStorage.setItem('bookingComparatorFileA',JSON.stringify({rows,name,subject:subj,from:frm}));
+      }catch(e){}
       document.getElementById('fileALoaded').style.display='block';
+      document.getElementById('resetBtn').style.display='block';
       document.getElementById('card1').classList.add('loaded');
       document.getElementById('num1').classList.add('done');
       document.getElementById('sub1').style.display='none';
@@ -501,6 +525,21 @@ function exportXLSX(){
   });
   XLSX.utils.book_append_sheet(wb2,XLSX.utils.aoa_to_sheet(det),'Details');
   XLSX.writeFile(wb2,`booking_comparison_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function resetFileA(){
+  dataA=[]; fileAName=''; allHeaders=[];
+  try{localStorage.removeItem('bookingComparatorFileA');}catch(e){}
+  document.getElementById('fileALoaded').style.display='none';
+  document.getElementById('resetBtn').style.display='none';
+  document.getElementById('card1').classList.remove('loaded');
+  document.getElementById('num1').classList.remove('done');
+  document.getElementById('sub1').style.display='block';
+  document.getElementById('attListA').innerHTML='';
+  document.getElementById('emailInfoA').style.display='none';
+  document.getElementById('card3').style.display='none';
+  document.getElementById('resultsArea').style.display='none';
+  loadCurrentItem();
 }
 
 function dl(name,mime,content){
