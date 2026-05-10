@@ -10,7 +10,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;color:#222;background:#fff;padding:12px}
 h1{font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:2px}
-.sub{font-size:11px;color:#888;margin-bottom:14px}
+.sub{font-size:11px;color:#888;margin-bottom:10px}
 
 .step-card{border:1px solid #e0e0e0;border-radius:8px;padding:10px 12px;margin-bottom:10px}
 .step-card.loaded{border-color:#107C10;background:#f6fff6}
@@ -43,6 +43,9 @@ select.cfg-sel{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px
 .cmp-btn{width:100%;padding:9px;border-radius:6px;border:none;background:#0078d4;color:#fff;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px}
 .cmp-btn:hover{background:#005fa3}
 .cmp-btn:disabled{background:#ccc;cursor:default}
+
+.reset-btn{display:none;margin-top:6px;padding:5px 8px;border:1px solid #ccc;border-radius:5px;background:#fff;color:#333;font-size:11px;font-weight:600;cursor:pointer}
+.reset-btn:hover{background:#f5f5f5}
 
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
 .stat{text-align:center;padding:7px 4px;border-radius:6px;border:1px solid #e0e0e0}
@@ -92,7 +95,6 @@ select.cfg-sel{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .search-inp{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px;padding:6px 8px;margin-bottom:8px}
-
 .tag-sz{background:#fdf3e7;color:#854F0B}
 </style>
 </head>
@@ -100,6 +102,18 @@ select.cfg-sel{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px
 
 <h1>📋 Booking Comparator</h1>
 <p class="sub">Open an email → load its attachment → switch emails → load second → compare.</p>
+
+<div style="margin-bottom:10px">
+  <div class="cfg-label">Header row</div>
+  <select id="headerMode" class="cfg-sel">
+    <option value="auto" selected>Auto detect</option>
+    <option value="1">Row 1</option>
+    <option value="2">Row 2</option>
+    <option value="3">Row 3</option>
+    <option value="4">Row 4</option>
+    <option value="noheaders">No headers</option>
+  </select>
+</div>
 
 <div id="standaloneMode" style="display:none">
   <div style="background:#fff3dc;border:1px solid #e6a817;border-radius:6px;padding:8px 10px;font-size:11px;color:#7a4f00;margin-bottom:10px">
@@ -115,62 +129,64 @@ select.cfg-sel{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px
     <input type="file" accept=".xlsx,.xls,.csv" onchange="handleStandaloneFile('B',this)" style="font-size:12px;width:100%">
     <div id="fileBStatus" style="font-size:11px;margin-top:3px;color:#888"></div>
   </div>
-  <div id="standaloneConfig" style="display:none">
-    <div style="font-size:11px;color:#555;margin-bottom:3px;font-weight:500">Reference column</div>
+  <button id="resetBtnStandalone" onclick="resetFileA()" class="reset-btn">Clear File A / Start new comparison</button>
+  <div id="standaloneConfig" style="display:none;margin-top:10px">
+    <div class="cfg-label">Reference column</div>
     <select class="cfg-sel" id="refColS"></select>
-    <div style="font-size:11px;color:#555;margin-bottom:3px;font-weight:500">Name column (optional)</div>
+    <div class="cfg-label">Name column (optional)</div>
     <select class="cfg-sel" id="nameColS"><option value="">— none —</option></select>
     <button class="cmp-btn" onclick="runStandaloneCompare()">Compare bookings</button>
   </div>
 </div>
 
 <div id="outlookMode" style="display:none">
-<!-- STEP 1 -->
-<div class="step-card" id="card1">
-  <div class="step-header">
-    <div class="step-num" id="num1">1</div>
-    <div class="step-title">Load File A — original list</div>
+  <!-- STEP 1 -->
+  <div class="step-card" id="card1">
+    <div class="step-header">
+      <div class="step-num" id="num1">1</div>
+      <div class="step-title">Load File A — original list</div>
+    </div>
+    <p class="step-sub" id="sub1">Open the email with the original booking list, then pick the attachment below.</p>
+    <div id="emailInfoA" style="display:none" class="email-info">
+      <div class="email-subject" id="subjA"></div>
+      <div class="email-from" id="fromA"></div>
+    </div>
+    <div id="attListA" class="att-list"></div>
+    <div id="noAttA" class="no-att" style="display:none">No Excel/CSV attachments found in this email.</div>
+    <div id="fileALoaded" style="display:none;font-size:11px;color:#107C10;font-weight:600">✓ File A loaded — now open the second email.</div>
+    <button id="resetBtn" onclick="resetFileA()" class="reset-btn">Clear File A / Start new comparison</button>
   </div>
-  <p class="step-sub" id="sub1">Open the email with the original booking list, then pick the attachment below.</p>
-  <div id="emailInfoA" style="display:none" class="email-info">
-    <div class="email-subject" id="subjA"></div>
-    <div class="email-from" id="fromA"></div>
+
+  <!-- STEP 2 -->
+  <div class="step-card" id="card2">
+    <div class="step-header">
+      <div class="step-num" id="num2">2</div>
+      <div class="step-title">Load File B — updated list</div>
+    </div>
+    <p class="step-sub">Open the email with the updated list, then pick the attachment below.</p>
+    <div id="emailInfoB" style="display:none" class="email-info">
+      <div class="email-subject" id="subjB"></div>
+      <div class="email-from" id="fromB"></div>
+    </div>
+    <div id="attListB" class="att-list"></div>
+    <div id="noAttB" class="no-att" style="display:none">No Excel/CSV attachments found in this email.</div>
+    <div id="fileBLoaded" style="display:none;font-size:11px;color:#107C10;font-weight:600">✓ File B loaded — configure columns below.</div>
   </div>
-  <div id="attListA" class="att-list"></div>
-  <div id="noAttA" class="no-att" style="display:none">No Excel attachments found in this email.</div>
-  <div id="fileALoaded" style="display:none;font-size:11px;color:#107C10;font-weight:600">✓ File A loaded — now open the second email.</div>
+
+  <!-- STEP 3 -->
+  <div class="step-card" id="card3" style="display:none">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Configure columns</div>
+    </div>
+    <div class="cfg-label">Reference column (booking/party ID)</div>
+    <select class="cfg-sel" id="refCol"></select>
+    <div class="cfg-label">Passenger name column (optional)</div>
+    <select class="cfg-sel" id="nameCol"><option value="">— none —</option></select>
+    <button class="cmp-btn" id="cmpBtn" onclick="runCompare()">Compare bookings</button>
+  </div>
 </div>
 
-<!-- STEP 2 -->
-<div class="step-card" id="card2">
-  <div class="step-header">
-    <div class="step-num" id="num2">2</div>
-    <div class="step-title">Load File B — updated list</div>
-  </div>
-  <p class="step-sub">Open the email with the updated list, then pick the attachment below.</p>
-  <div id="emailInfoB" style="display:none" class="email-info">
-    <div class="email-subject" id="subjB"></div>
-    <div class="email-from" id="fromB"></div>
-  </div>
-  <div id="attListB" class="att-list"></div>
-  <div id="noAttB" class="no-att" style="display:none">No Excel attachments found in this email.</div>
-  <div id="fileBLoaded" style="display:none;font-size:11px;color:#107C10;font-weight:600">✓ File B loaded — configure columns below.</div>
-</div>
-
-<!-- STEP 3 -->
-<div class="step-card" id="card3" style="display:none">
-  <div class="step-header">
-    <div class="step-num">3</div>
-    <div class="step-title">Configure columns</div>
-  </div>
-  <div class="cfg-label">Reference column (booking/party ID)</div>
-  <select class="cfg-sel" id="refCol"></select>
-  <div class="cfg-label">Passenger name column (optional)</div>
-  <select class="cfg-sel" id="nameCol"><option value="">— none —</option></select>
-  <button class="cmp-btn" id="cmpBtn" onclick="runCompare()">Compare bookings</button>
-</div>
-
-</div><!-- end outlookMode -->
 <div class="msg" id="loadMsg"><span class="spinner"></span> Loading attachment…</div>
 
 <div id="resultsArea" style="display:none">
@@ -189,475 +205,860 @@ select.cfg-sel{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px
 </div>
 
 <script>
-let dataA=[], dataB=[], allHeaders=[], allResults=[];
-let fileAName='', fileBName='';
-let currentItem=null;
+const STORE_KEY = 'bookingComparatorFileA';
 
-// Handle both Outlook and standalone browser mode
-function initApp(){
-  if(typeof Office==='undefined'||!Office.context||!Office.context.mailbox){
-    // Standalone browser mode — show file upload fallback
-    document.getElementById('outlookMode').style.display='none';
-    document.getElementById('standaloneMode').style.display='block';
-    tryRestoreFileA();
+let dataA = [], dataB = [], allHeaders = [], allResults = [];
+let fileAName = '', fileBName = '';
+let currentItem = null;
+let currentRefCol = '';
+let currentNameCol = '';
+let appStarted = false;
+
+function show(id, display = 'block') {
+  const el = document.getElementById(id);
+  if (el) el.style.display = display;
+}
+
+function hide(id) {
+  show(id, 'none');
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function initStandaloneMode() {
+  if (appStarted) return;
+  appStarted = true;
+  hide('outlookMode');
+  show('standaloneMode');
+  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  tryRestoreFileA('standalone');
+}
+
+function initOutlookMode() {
+  if (appStarted) return;
+  appStarted = true;
+  show('outlookMode');
+  hide('standaloneMode');
+
+  // Remove old persistent storage from earlier versions so an old File A does not keep coming back forever.
+  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+
+  tryRestoreFileA('outlook');
+
+  try {
+    Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, onItemChanged);
+  } catch (e) {}
+
+  loadCurrentItem();
+}
+
+(function bootstrap() {
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      if (!appStarted) initStandaloneMode();
+    }, 2500);
+  });
+
+  if (typeof Office === 'undefined') return;
+
+  Office.onReady(function (info) {
+    if (info && info.host === Office.HostType.Outlook && Office.context && Office.context.mailbox) {
+      initOutlookMode();
+    } else {
+      initStandaloneMode();
+    }
+  });
+})();
+
+function onItemChanged() {
+  loadCurrentItem();
+}
+
+function loadCurrentItem() {
+  if (typeof Office === 'undefined' || !Office.context || !Office.context.mailbox) return;
+
+  currentItem = Office.context.mailbox.item;
+  if (!currentItem) return;
+
+  const subj = currentItem.subject || '(no subject)';
+  const from = currentItem.from ? currentItem.from.displayName + ' <' + currentItem.from.emailAddress + '>' : '';
+  const atts = (currentItem.attachments || []).filter(isExcel);
+
+  if (!dataA.length) {
+    renderSlot('A', subj, from, atts);
+  } else {
+    renderSlot('B', subj, from, atts);
+  }
+}
+
+function isExcel(a) {
+  return !!(a && a.name && a.name.match(/\.(xlsx|xls|csv)$/i));
+}
+
+function renderSlot(side, subj, from, atts) {
+  setText('subj' + side, subj);
+  setText('from' + side, from);
+  show('emailInfo' + side, from ? 'block' : 'none');
+
+  const list = document.getElementById('attList' + side);
+  const noAtt = document.getElementById('noAtt' + side);
+  if (!list || !noAtt) return;
+
+  list.innerHTML = '';
+
+  if (!atts.length) {
+    noAtt.style.display = 'block';
     return;
   }
-  document.getElementById('outlookMode').style.display='block';
-  document.getElementById('standaloneMode').style.display='none';
-  Office.onReady(info=>{
-  if(info.host===Office.HostType.Outlook){
-    // Restore File A from localStorage if it exists
-    try{
-      const saved=localStorage.getItem('bookingComparatorFileA');
-      if(saved){
-        const parsed=JSON.parse(saved);
-        dataA=parsed.rows; fileAName=parsed.name;
-        document.getElementById('fileALoaded').style.display='block';
-        document.getElementById('card1').classList.add('loaded');
-        document.getElementById('num1').classList.add('done');
-        document.getElementById('sub1').style.display='none';
-        document.getElementById('subjA').textContent=parsed.subject||'';
-        document.getElementById('fromA').textContent=parsed.from||'';
-        document.getElementById('emailInfoA').style.display=parsed.from?'block':'none';
-        document.getElementById('fileALoaded').textContent='\u2713 '+parsed.name+' (saved) \u2014 now open the second email.';
-        rebuildHeaders();
-      }
-    }catch(e){}
-    Office.context.mailbox.addHandlerAsync(
-      Office.EventType.ItemChanged,
-      onItemChanged
-    );
-    loadCurrentItem();
-  }
-  });
-}
 
-// Try to init with Office, fallback if it fails
-if(typeof Office!=='undefined'){
-  Office.onReady(()=>{ initApp(); });
-} else {
-  window.addEventListener('load', initApp);
-}
+  noAtt.style.display = 'none';
 
-function onItemChanged(){ loadCurrentItem(); }
+  atts.forEach(att => {
+    const div = document.createElement('div');
+    div.className = 'att-item';
 
-function loadCurrentItem(){
-  currentItem=Office.context.mailbox.item;
-  if(!currentItem)return;
-  const subj=currentItem.subject||'(no subject)';
-  const from=currentItem.from?currentItem.from.displayName+' <'+currentItem.from.emailAddress+'>':'';
-  const atts=(currentItem.attachments||[]).filter(isExcel);
+    const icon = document.createElement('span');
+    icon.className = 'att-icon';
+    icon.textContent = '📊';
 
-  // Update both slots — show current email's Excel attachments
-  // If file A not loaded yet → show in slot A; else show in slot B
-  if(!dataA.length){
-    renderSlot('A',subj,from,atts);
-  } else {
-    renderSlot('B',subj,from,atts);
-  }
-}
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'att-name';
+    nameSpan.title = att.name;
+    nameSpan.textContent = att.name;
 
-function isExcel(a){
-  return a.name.match(/\.(xlsx|xls|csv)$/i)&&a.attachmentType!=='olByValue'||
-         a.name.match(/\.(xlsx|xls|csv)$/i);
-}
+    const btn = document.createElement('button');
+    btn.className = 'att-btn';
+    btn.textContent = 'Set as ' + side;
+    btn.addEventListener('click', () => loadAtt(side, att.id, att.name));
 
-function renderSlot(side,subj,from,atts){
-  document.getElementById('subj'+side).textContent=subj;
-  document.getElementById('from'+side).textContent=from;
-  document.getElementById('emailInfo'+side).style.display=from?'block':'none';
-  const list=document.getElementById('attList'+side);
-  const noAtt=document.getElementById('noAtt'+side);
-  list.innerHTML='';
-  if(!atts.length){noAtt.style.display='block';return;}
-  noAtt.style.display='none';
-  atts.forEach(att=>{
-    const div=document.createElement('div');
-    div.className='att-item';
-    div.innerHTML=`<span class="att-icon">📊</span>
-      <span class="att-name" title="${esc(att.name)}">${esc(att.name)}</span>
-      <button class="att-btn" onclick="loadAtt('${side}','${att.id}','${esc(att.name)}')">
-        Set as ${side}
-      </button>`;
+    div.appendChild(icon);
+    div.appendChild(nameSpan);
+    div.appendChild(btn);
     list.appendChild(div);
   });
 }
 
-function loadAtt(side,attId,name){
-  document.getElementById('loadMsg').classList.add('show');
-  currentItem.getAttachmentContentAsync(attId,{},result=>{
-    document.getElementById('loadMsg').classList.remove('show');
-    if(result.status!==Office.AsyncResultStatus.Succeeded){
-      alert('Could not load attachment: '+result.error.message);return;
+function loadAtt(side, attId, name) {
+  if (!currentItem) {
+    alert('No email is currently selected.');
+    return;
+  }
+
+  show('loadMsg');
+
+  currentItem.getAttachmentContentAsync(attId, {}, result => {
+    hide('loadMsg');
+
+    if (result.status !== Office.AsyncResultStatus.Succeeded) {
+      alert('Could not load attachment: ' + result.error.message);
+      return;
     }
-    const content=result.value.content;
-    let wb;
-    if(name.match(/\.csv$/i)){
-      const text=atob(content);
-      wb=XLSX.read(text,{type:'string'});
-    } else {
-      wb=XLSX.read(content,{type:'base64'});
+
+    let rows;
+    try {
+      rows = rowsFromAttachmentContent(result.value.content, name);
+    } catch (e) {
+      alert('Could not read attachment. ' + (e && e.message ? e.message : e));
+      return;
     }
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
-    if(side==='A'){
-      dataA=rows; fileAName=name;
-      // Save File A to localStorage so it survives email switches
-      try{
-        const subj=currentItem.subject||'';
-        const frm=currentItem.from?currentItem.from.displayName+' <'+currentItem.from.emailAddress+'>':'';
-        localStorage.setItem('bookingComparatorFileA',JSON.stringify({rows,name,subject:subj,from:frm}));
-      }catch(e){}
-      document.getElementById('fileALoaded').style.display='block';
-      document.getElementById('resetBtn').style.display='block';
-      document.getElementById('card1').classList.add('loaded');
-      document.getElementById('num1').classList.add('done');
-      document.getElementById('sub1').style.display='none';
-      // now switch slot to B
-      renderSlot('B',
-        Office.context.mailbox.item?Office.context.mailbox.item.subject:'',
-        Office.context.mailbox.item&&Office.context.mailbox.item.from?
-          Office.context.mailbox.item.from.displayName:'',
-        (Office.context.mailbox.item?Office.context.mailbox.item.attachments||[]:[]).filter(isExcel)
+
+    if (side === 'A') {
+      dataA = rows;
+      fileAName = name;
+
+      const subj = currentItem.subject || '';
+      const frm = currentItem.from ? currentItem.from.displayName + ' <' + currentItem.from.emailAddress + '>' : '';
+      saveFileA(rows, name, subj, frm);
+
+      showFileALoaded(name + ' — now open the second email.');
+
+      // After File A is chosen, the current email's attachments move to slot B.
+      const item = Office.context.mailbox.item;
+      renderSlot(
+        'B',
+        item ? item.subject || '' : '',
+        item && item.from ? item.from.displayName + ' <' + item.from.emailAddress + '>' : '',
+        item ? (item.attachments || []).filter(isExcel) : []
       );
     } else {
-      dataB=rows; fileBName=name;
-      document.getElementById('fileBLoaded').style.display='block';
-      document.getElementById('card2').classList.add('loaded');
-      document.getElementById('num2').classList.add('done');
+      dataB = rows;
+      fileBName = name;
+      show('fileBLoaded');
+      const card2 = document.getElementById('card2');
+      const num2 = document.getElementById('num2');
+      if (card2) card2.classList.add('loaded');
+      if (num2) num2.classList.add('done');
+      rebuildHeaders();
       populateConfig();
-      document.getElementById('card3').style.display='block';
+      show('card3');
     }
+
     rebuildHeaders();
   });
 }
 
-function rebuildHeaders(){
-  const ha=dataA.length?Object.keys(dataA[0]):[];
-  const hb=dataB.length?Object.keys(dataB[0]):[];
-  allHeaders=[...new Set([...ha,...hb])];
+function rowsFromAttachmentContent(content, name) {
+  let wb;
+
+  if (name.match(/\.csv$/i)) {
+    const text = decodeCsvBase64(content);
+    wb = XLSX.read(text, { type: 'string' });
+  } else {
+    wb = XLSX.read(content, { type: 'base64' });
+  }
+
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return sheetToRows(ws);
 }
 
-function populateConfig(){
-  // Also fill standalone selects if visible
-  const refS=document.getElementById('refColS');
-  const nameS=document.getElementById('nameColS');
-  if(refS){
-    const gR=guess(allHeaders,['ref','reference','booking','id','code','res','voucher']);
-    const gN=guess(allHeaders,['name','passenger','pax','guest','client']);
-    refS.innerHTML=''; nameS.innerHTML='<option value="">— none —</option>';
-    allHeaders.forEach(h=>{
-      const o1=document.createElement('option');o1.value=h;o1.textContent=h;if(h===gR)o1.selected=true;refS.appendChild(o1);
-      const o2=document.createElement('option');o2.value=h;o2.textContent=h;if(h===gN)o2.selected=true;nameS.appendChild(o2);
-    });
+function decodeCsvBase64(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  try {
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch (e) {
+    return binary;
   }
-  // Original selects
-  populateConfig_orig();
 }
-function populateConfig_orig(){
-  rebuildHeaders();
-  const refSel=document.getElementById('refCol');
-  const nameSel=document.getElementById('nameCol');
-  refSel.innerHTML=''; nameSel.innerHTML='<option value="">— none —</option>';
-  const guessRef=guess(allHeaders,['ref','reference','booking','id','code','res','voucher']);
-  const guessName=guess(allHeaders,['name','passenger','pax','guest','client']);
-  allHeaders.forEach(h=>{
-    const o1=document.createElement('option');o1.value=h;o1.textContent=h;
-    if(h===guessRef)o1.selected=true; refSel.appendChild(o1);
-    const o2=document.createElement('option');o2.value=h;o2.textContent=h;
-    if(h===guessName)o2.selected=true; nameSel.appendChild(o2);
+
+function saveFileA(rows, name, subject, from) {
+  try {
+    sessionStorage.setItem(STORE_KEY, JSON.stringify({ rows, name, subject, from }));
+  } catch (e) {
+    // Large files may exceed browser storage. Keep data in memory for the current pane session.
+    console.warn('Could not save File A to sessionStorage:', e);
+  }
+}
+
+function tryRestoreFileA(mode) {
+  try {
+    const saved = sessionStorage.getItem(STORE_KEY);
+    if (!saved) return;
+
+    const parsed = JSON.parse(saved);
+    if (!parsed || !Array.isArray(parsed.rows)) return;
+
+    dataA = parsed.rows;
+    fileAName = parsed.name || '';
+    rebuildHeaders();
+
+    if (mode === 'outlook') {
+      setText('subjA', parsed.subject || '');
+      setText('fromA', parsed.from || '');
+      show('emailInfoA', parsed.from ? 'block' : 'none');
+      showFileALoaded((parsed.name || 'File A') + ' (saved this session) — now open the second email.');
+    } else {
+      setText('fileAStatus', '✓ ' + (parsed.name || 'File A') + ' loaded');
+      const st = document.getElementById('fileAStatus');
+      if (st) st.style.color = '#107C10';
+      show('resetBtnStandalone');
+    }
+  } catch (e) {}
+}
+
+function showFileALoaded(text) {
+  setText('fileALoaded', '✓ ' + text);
+  show('fileALoaded');
+  show('resetBtn');
+
+  const card1 = document.getElementById('card1');
+  const num1 = document.getElementById('num1');
+  if (card1) card1.classList.add('loaded');
+  if (num1) num1.classList.add('done');
+  hide('sub1');
+}
+
+function colName(n) {
+  let s = '';
+  while (n >= 0) {
+    s = String.fromCharCode((n % 26) + 65) + s;
+    n = Math.floor(n / 26) - 1;
+  }
+  return 'Column ' + s;
+}
+
+function isBlankRow(row) {
+  return !row || row.every(v => String(v ?? '').trim() === '');
+}
+
+function makeUniqueHeaders(headers) {
+  const seen = {};
+  return headers.map((h, i) => {
+    let name = String(h ?? '').replace(/\s+/g, ' ').trim();
+    if (!name) name = colName(i);
+
+    if (seen[name]) {
+      seen[name] += 1;
+      name = name + ' ' + seen[name];
+    } else {
+      seen[name] = 1;
+    }
+
+    return name;
   });
 }
 
-function guess(headers,kws){
-  for(const kw of kws){const h=headers.find(h=>h.toLowerCase().includes(kw));if(h)return h;}
+function detectHeaderRow(aoa) {
+  const keywords = [
+    'bus', 'pickup', 'time', 'starting', 'point', 'flight', 'status',
+    'tour', 'operator', 'order', 'vehicle', 'pax',
+    'δρομολογιο', 'παρατηρησεις', 'παρατηρήσεις', 'ημερησιο', 'προγραμμα'
+  ];
+
+  let bestIndex = 0;
+  let bestScore = -1;
+
+  aoa.slice(0, 10).forEach((row, idx) => {
+    if (isBlankRow(row)) return;
+
+    const cells = row.map(v => String(v ?? '').trim()).filter(Boolean);
+    const joined = cells.join(' ').toLowerCase();
+
+    let score = cells.length;
+
+    keywords.forEach(k => {
+      if (joined.includes(k)) score += 5;
+    });
+
+    // Penalize title-only rows like the big report title/date row.
+    if (cells.length <= 2) score -= 10;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = idx;
+    }
+  });
+
+  return bestIndex;
+}
+
+function sheetToRows(ws) {
+  const aoa = XLSX.utils.sheet_to_json(ws, {
+    header: 1,
+    defval: '',
+    raw: false,
+    blankrows: false
+  });
+
+  if (!aoa.length) return [];
+
+  const headerModeEl = document.getElementById('headerMode');
+  const mode = headerModeEl ? headerModeEl.value : 'auto';
+
+  if (mode === 'noheaders') {
+    const maxCols = Math.max(...aoa.map(r => r.length));
+    const headers = Array.from({ length: maxCols }, (_, i) => colName(i));
+
+    return aoa
+      .filter(row => !isBlankRow(row))
+      .map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] ?? '');
+        return obj;
+      });
+  }
+
+  const headerRowIndex = mode === 'auto' ? detectHeaderRow(aoa) : Math.max(0, Number(mode) - 1);
+  const bodyRows = aoa.slice(headerRowIndex + 1);
+  const maxCols = Math.max((aoa[headerRowIndex] || []).length, ...bodyRows.map(r => r.length));
+  const rawHeaders = Array.from({ length: maxCols }, (_, i) => (aoa[headerRowIndex] || [])[i] ?? '');
+  const headers = makeUniqueHeaders(rawHeaders);
+
+  return bodyRows
+    .filter(row => !isBlankRow(row))
+    .map(row => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = row[i] ?? '');
+      return obj;
+    });
+}
+
+function rebuildHeaders() {
+  const ha = dataA.length ? Object.keys(dataA[0]) : [];
+  const hb = dataB.length ? Object.keys(dataB[0]) : [];
+  allHeaders = [...new Set([...ha, ...hb])];
+}
+
+function populateConfig() {
+  rebuildHeaders();
+
+  fillSelects('refColS', 'nameColS');
+  fillSelects('refCol', 'nameCol');
+}
+
+function fillSelects(refId, nameId) {
+  const refSel = document.getElementById(refId);
+  const nameSel = document.getElementById(nameId);
+  if (!refSel || !nameSel) return;
+
+  const guessRef = guess(allHeaders, ['order', 'file no', 'file', 'ref', 'reference', 'booking', 'id', 'code', 'res', 'voucher', 'starting point']);
+  const guessName = guess(allHeaders, ['name', 'passenger', 'pax', 'guest', 'client', 'starting point']);
+
+  refSel.innerHTML = '';
+  nameSel.innerHTML = '<option value="">— none —</option>';
+
+  allHeaders.forEach(h => {
+    const o1 = document.createElement('option');
+    o1.value = h;
+    o1.textContent = h;
+    if (h === guessRef) o1.selected = true;
+    refSel.appendChild(o1);
+
+    const o2 = document.createElement('option');
+    o2.value = h;
+    o2.textContent = h;
+    if (h === guessName) o2.selected = true;
+    nameSel.appendChild(o2);
+  });
+}
+
+function guess(headers, kws) {
+  for (const kw of kws) {
+    const h = headers.find(h => String(h).toLowerCase().includes(kw));
+    if (h) return h;
+  }
   return '';
 }
 
-function norm(v){return String(v??'').trim().toLowerCase();}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function norm(v) {
+  return String(v ?? '').trim().toLowerCase();
+}
 
-function groupBy(rows,col){
-  const g={};
-  rows.forEach(r=>{const k=norm(r[col]);if(!g[k])g[k]=[];g[k].push(r);});
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function groupBy(rows, col) {
+  const g = {};
+
+  rows.forEach(r => {
+    const k = norm(r[col]);
+    if (!k) return; // Do not group all blank references together.
+    if (!g[k]) g[k] = [];
+    g[k].push(r);
+  });
+
   return g;
 }
 
-function rowSim(a,b){
-  let match=0,total=0;
-  allHeaders.forEach(h=>{const va=norm(a[h]),vb=norm(b[h]);if(va||vb){total++;if(va===vb)match++;}});
-  return total?match/total:0;
+function rowSim(a, b) {
+  let match = 0, total = 0;
+
+  allHeaders.forEach(h => {
+    const va = norm(a[h]);
+    const vb = norm(b[h]);
+    if (va || vb) {
+      total++;
+      if (va === vb) match++;
+    }
+  });
+
+  return total ? match / total : 0;
 }
 
-function diffCells(rA,rB){
-  const ch=[];
-  allHeaders.forEach(h=>{
-    const va=norm(rA[h]??''),vb=norm(rB[h]??'');
-    if(va!==vb)ch.push({col:h,old:String(rA[h]??''),nw:String(rB[h]??'')});
+function diffCells(rA, rB) {
+  const ch = [];
+
+  allHeaders.forEach(h => {
+    const va = norm(rA[h] ?? '');
+    const vb = norm(rB[h] ?? '');
+    if (va !== vb) ch.push({ col: h, old: String(rA[h] ?? ''), nw: String(rB[h] ?? '') });
   });
+
   return ch;
 }
 
-function runStandaloneCompare(){
-  const refCol=document.getElementById('refColS').value;
-  const nameCol=document.getElementById('nameColS').value;
-  runCompareWithCols(refCol,nameCol);
+function runStandaloneCompare() {
+  const refCol = document.getElementById('refColS').value;
+  const nameCol = document.getElementById('nameColS').value;
+  runCompareWithCols(refCol, nameCol);
 }
 
-function runCompare(){
-  const refCol=document.getElementById('refCol').value;
-  const nameCol=document.getElementById('nameCol').value;
-  runCompareWithCols(refCol,nameCol);
+function runCompare() {
+  const refCol = document.getElementById('refCol').value;
+  const nameCol = document.getElementById('nameCol').value;
+  runCompareWithCols(refCol, nameCol);
 }
 
-function runCompareWithCols(refCol,nameCol){
-  if(!refCol){alert('Select a reference column first.');return;}
+function runCompareWithCols(refCol, nameCol) {
+  if (!refCol) {
+    alert('Select a reference column first.');
+    return;
+  }
 
-  const gA=groupBy(dataA,refCol);
-  const gB=groupBy(dataB,refCol);
-  const allRefs=[...new Set([...Object.keys(gA),...Object.keys(gB)])].sort();
-  allResults=[];
+  currentRefCol = refCol;
+  currentNameCol = nameCol || '';
 
-  allRefs.forEach(ref=>{
-    const grpA=gA[ref]||[], grpB=gB[ref]||[];
-    if(!grpA.length){allResults.push({ref,type:'new',gA:grpA,gB:grpB,nameCol});return;}
-    if(!grpB.length){allResults.push({ref,type:'deleted',gA:grpA,gB:grpB,nameCol});return;}
+  const gA = groupBy(dataA, refCol);
+  const gB = groupBy(dataB, refCol);
+  const allRefs = [...new Set([...Object.keys(gA), ...Object.keys(gB)])].sort();
 
-    const usedB=new Set(); const pairs=[];
-    grpA.forEach((rA,iA)=>{
-      let bestS=0,bestI=-1;
-      grpB.forEach((rB,iB)=>{if(usedB.has(iB))return;const s=rowSim(rA,rB);if(s>bestS){bestS=s;bestI=iB;}});
-      if(bestI>=0){
+  if (!allRefs.length) {
+    alert('No rows had a value in the selected reference column. Try another reference column.');
+    return;
+  }
+
+  allResults = [];
+
+  allRefs.forEach(ref => {
+    const grpA = gA[ref] || [];
+    const grpB = gB[ref] || [];
+
+    if (!grpA.length) {
+      allResults.push({ ref, type: 'new', gA: grpA, gB: grpB, nameCol });
+      return;
+    }
+
+    if (!grpB.length) {
+      allResults.push({ ref, type: 'deleted', gA: grpA, gB: grpB, nameCol });
+      return;
+    }
+
+    const usedB = new Set();
+    const pairs = [];
+
+    grpA.forEach(rA => {
+      let bestS = 0;
+      let bestI = -1;
+
+      grpB.forEach((rB, iB) => {
+        if (usedB.has(iB)) return;
+        const s = rowSim(rA, rB);
+        if (s > bestS) {
+          bestS = s;
+          bestI = iB;
+        }
+      });
+
+      if (bestI >= 0) {
         usedB.add(bestI);
-        const ch=diffCells(rA,grpB[bestI]);
-        pairs.push({rA,rB:grpB[bestI],changed:ch,status:ch.length?'changed':'ok'});
-      } else {pairs.push({rA,rB:null,changed:[],status:'deleted'});}
+        const ch = diffCells(rA, grpB[bestI]);
+        pairs.push({ rA, rB: grpB[bestI], changed: ch, status: ch.length ? 'changed' : 'ok' });
+      } else {
+        pairs.push({ rA, rB: null, changed: [], status: 'deleted' });
+      }
     });
-    grpB.forEach((rB,iB)=>{if(!usedB.has(iB))pairs.push({rA:null,rB,changed:[],status:'new'});});
 
-    const anyChanged=pairs.some(p=>p.status!=='ok');
-    const sizeChg=grpA.length!==grpB.length;
-    const type=!anyChanged&&sizeChg?'sizechange':anyChanged?'changed':'ok';
-    allResults.push({ref,type,gA:grpA,gB:grpB,pairs,nameCol});
+    grpB.forEach((rB, iB) => {
+      if (!usedB.has(iB)) pairs.push({ rA: null, rB, changed: [], status: 'new' });
+    });
+
+    const anyChanged = pairs.some(p => p.status !== 'ok');
+    const sizeChg = grpA.length !== grpB.length;
+    const type = !anyChanged && sizeChg ? 'sizechange' : anyChanged ? 'changed' : 'ok';
+
+    allResults.push({ ref, type, gA: grpA, gB: grpB, pairs, nameCol });
   });
 
   renderResults(nameCol);
 }
 
-function renderResults(nameCol){
-  const c={ok:0,changed:0,new:0,deleted:0,sizechange:0};
-  allResults.forEach(r=>c[r.type]=(c[r.type]||0)+1);
-  document.getElementById('cOk').textContent=c.ok||0;
-  document.getElementById('cCh').textContent=(c.changed||0)+(c.sizechange||0);
-  document.getElementById('cNew').textContent=c.new||0;
-  document.getElementById('cDel').textContent=c.deleted||0;
+function renderResults(nameCol) {
+  const c = { ok: 0, changed: 0, new: 0, deleted: 0, sizechange: 0 };
+  allResults.forEach(r => c[r.type] = (c[r.type] || 0) + 1);
 
-  const cols=allHeaders.filter(h=>h!==document.getElementById('refCol').value);
+  setText('cOk', c.ok || 0);
+  setText('cCh', (c.changed || 0) + (c.sizechange || 0));
+  setText('cNew', c.new || 0);
+  setText('cDel', c.deleted || 0);
 
-  const sections=[
-    {label:'Data changes',types:['changed','sizechange']},
-    {label:'New references',types:['new']},
-    {label:'Removed references',types:['deleted']},
-    {label:'Identical',types:['ok']},
+  const cols = allHeaders.filter(h => h !== currentRefCol);
+
+  const sections = [
+    { label: 'Data changes', types: ['changed', 'sizechange'] },
+    { label: 'New references', types: ['new'] },
+    { label: 'Removed references', types: ['deleted'] },
+    { label: 'Identical', types: ['ok'] }
   ];
 
-  let html='';
-  sections.forEach(sec=>{
-    const items=allResults.filter(r=>sec.types.includes(r.type));
-    if(!items.length)return;
-    html+=`<div class="sec-head" data-sec="${sec.types.join(',')}">${sec.label} (${items.length})</div>`;
-    items.forEach((r,si)=>{
-      const rid=`r${si}`;
-      const summ=nameCol&&r.gA.length?r.gA.map(x=>x[nameCol]||'').filter(Boolean).join(', '):
-                 nameCol&&r.gB.length?r.gB.map(x=>x[nameCol]||'').filter(Boolean).join(', '):'';
-      let badge='',bc='';
-      if(r.type==='ok'){badge='Identical';bc='bk-ok';}
-      else if(r.type==='new'){badge='New';bc='bk-new';}
-      else if(r.type==='deleted'){badge='Removed';bc='bk-del';}
-      else if(r.type==='sizechange'){badge='Party ±';bc='bk-sz';}
-      else{const n=r.pairs?r.pairs.filter(p=>p.status!=='ok').length:0;badge=n+' change'+(n>1?'s':'');bc='bk-ch';}
+  let html = '';
+  let ridCounter = 0;
+  const changedIds = [];
 
-      html+=`<div class="ref-block" data-type="${r.type}" data-ref="${esc(r.ref)}" id="blk_${rid}">
+  sections.forEach(sec => {
+    const items = allResults.filter(r => sec.types.includes(r.type));
+    if (!items.length) return;
+
+    html += `<div class="sec-head" data-sec="${sec.types.join(',')}">${sec.label} (${items.length})</div>`;
+
+    items.forEach(r => {
+      const rid = 'r' + ridCounter++;
+      if (r.type === 'changed' || r.type === 'sizechange') changedIds.push(rid);
+
+      const summ = nameCol && r.gA.length
+        ? r.gA.map(x => x[nameCol] || '').filter(Boolean).join(', ')
+        : nameCol && r.gB.length
+          ? r.gB.map(x => x[nameCol] || '').filter(Boolean).join(', ')
+          : '';
+
+      let badge = '', bc = '';
+
+      if (r.type === 'ok') {
+        badge = 'Identical';
+        bc = 'bk-ok';
+      } else if (r.type === 'new') {
+        badge = 'New';
+        bc = 'bk-new';
+      } else if (r.type === 'deleted') {
+        badge = 'Removed';
+        bc = 'bk-del';
+      } else if (r.type === 'sizechange') {
+        badge = 'Party ±';
+        bc = 'bk-sz';
+      } else {
+        const n = r.pairs ? r.pairs.filter(p => p.status !== 'ok').length : 0;
+        badge = n + ' change' + (n > 1 ? 's' : '');
+        bc = 'bk-ch';
+      }
+
+      html += `<div class="ref-block" data-type="${r.type}" data-ref="${esc(r.ref)}" id="blk_${rid}">
         <div class="ref-row" onclick="toggleRef('${rid}')">
           <span class="ref-id">${esc(r.ref)}</span>
           <span class="ref-badge ${bc}">${badge}</span>
-          ${summ?`<span class="ref-summ">${esc(summ)}</span>`:''}
+          ${summ ? `<span class="ref-summ">${esc(summ)}</span>` : ''}
           <span class="chev" id="chev_${rid}">▼</span>
         </div>
-        <div class="ref-detail" id="det_${rid}">${buildDetail(r,cols)}</div>
+        <div class="ref-detail" id="det_${rid}">${buildDetail(r, cols)}</div>
       </div>`;
     });
   });
 
-  document.getElementById('resultsList').innerHTML=html;
-  document.getElementById('resultsArea').style.display='block';
-  document.getElementById('card3').style.display='none';
+  document.getElementById('resultsList').innerHTML = html;
+  show('resultsArea');
+  hide('card3');
+  hide('standaloneConfig');
 
-  // auto-open changed
-  allResults.forEach((r,si)=>{if(r.type==='changed'||r.type==='sizechange')toggleRef('r'+si);});
+  changedIds.forEach(toggleRef);
 }
 
-function buildDetail(r,cols){
-  const visCols=h=>cols.filter(c=>{
-    const va=String(h.rA?h.rA[c]??'':''), vb=String(h.rB?h.rB[c]??'':'');
-    return va!==''||vb!=='';
-  });
+function buildDetail(r, cols) {
+  if (r.type === 'ok' || r.type === 'new' || r.type === 'deleted') {
+    const rows = r.type === 'deleted' ? r.gA : r.gB.length ? r.gB : r.gA;
+    const vc = cols.filter(c => rows.some(row => row[c] !== undefined && row[c] !== ''));
 
-  if(r.type==='ok'||r.type==='new'||r.type==='deleted'){
-    const rows=r.type==='deleted'?r.gA:r.gB.length?r.gB:r.gA;
-    const vc=cols.filter(c=>rows.some(row=>row[c]!==undefined&&row[c]!==''));
-    let t=`<div style="overflow-x:auto"><table class="detail-table"><tr>${vc.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>`;
-    rows.forEach(row=>{
-      const cls=r.type==='new'?'r-new':r.type==='deleted'?'r-del':'';
-      t+=`<tr class="${cls}">${vc.map(c=>`<td>${esc(String(row[c]??''))}</td>`).join('')}</tr>`;
+    if (!vc.length) return '<p style="font-size:11px;color:#888;padding:6px">No visible data.</p>';
+
+    let t = `<div style="overflow-x:auto"><table class="detail-table"><tr>${vc.map(c => `<th>${esc(c)}</th>`).join('')}</tr>`;
+
+    rows.forEach(row => {
+      const cls = r.type === 'new' ? 'r-new' : r.type === 'deleted' ? 'r-del' : '';
+      t += `<tr class="${cls}">${vc.map(c => `<td>${esc(String(row[c] ?? ''))}</td>`).join('')}</tr>`;
     });
-    return t+'</table></div>';
+
+    return t + '</table></div>';
   }
 
-  let html='';
-  r.pairs.forEach(p=>{
-    if(p.status==='ok')return;
-    const chSet=new Set(p.changed.map(c=>c.col));
-    const refRow=p.rA||p.rB;
-    const vc=cols.filter(c=>{
-      const va=String(p.rA?p.rA[c]??'':''),vb=String(p.rB?p.rB[c]??'':'');
-      return va!==''||vb!=='';
+  let html = '';
+
+  r.pairs.forEach(p => {
+    if (p.status === 'ok') return;
+
+    const chSet = new Set((p.changed || []).map(c => c.col));
+    const vc = cols.filter(c => {
+      const va = String(p.rA ? p.rA[c] ?? '' : '');
+      const vb = String(p.rB ? p.rB[c] ?? '' : '');
+      return va !== '' || vb !== '';
     });
-    if(p.status==='changed'){
-      html+=`<div style="overflow-x:auto"><table class="detail-table">
+
+    if (p.status === 'changed') {
+      html += `<div style="overflow-x:auto"><table class="detail-table">
         <tr><th>Column</th><th>Was (A)</th><th>Now (B)</th></tr>`;
-      vc.forEach(c=>{
-        const va=String(p.rA[c]??''),vb=String(p.rB[c]??'');
-        const isC=chSet.has(c);
-        html+=`<tr class="${isC?'r-ch':''}">
+
+      vc.forEach(c => {
+        const va = String(p.rA[c] ?? '');
+        const vb = String(p.rB[c] ?? '');
+        const isC = chSet.has(c);
+
+        html += `<tr class="${isC ? 'r-ch' : ''}">
           <td style="color:#666;font-weight:600">${esc(c)}</td>
-          <td>${isC?`<span class="c-ch-old">${esc(va)}</span>`:esc(va)}</td>
-          <td>${isC?`<span class="c-ch-new">${esc(vb)}</span>`:esc(vb)}</td>
+          <td>${isC ? `<span class="c-ch-old">${esc(va)}</span>` : esc(va)}</td>
+          <td>${isC ? `<span class="c-ch-new">${esc(vb)}</span>` : esc(vb)}</td>
         </tr>`;
       });
-      html+='</table></div>';
-    } else if(p.status==='new'){
-      html+=`<div style="font-size:10px;color:#0078d4;font-weight:600;margin:6px 0 3px">+ Added to party</div>
-        <div style="overflow-x:auto"><table class="detail-table"><tr>${vc.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>
-        <tr class="r-new">${vc.map(c=>`<td>${esc(String(p.rB[c]??''))}</td>`).join('')}</tr>
+
+      html += '</table></div>';
+    } else if (p.status === 'new') {
+      html += `<div style="font-size:10px;color:#0078d4;font-weight:600;margin:6px 0 3px">+ Added to party</div>
+        <div style="overflow-x:auto"><table class="detail-table"><tr>${vc.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
+        <tr class="r-new">${vc.map(c => `<td>${esc(String(p.rB[c] ?? ''))}</td>`).join('')}</tr>
         </table></div>`;
-    } else if(p.status==='deleted'){
-      html+=`<div style="font-size:10px;color:#a00;font-weight:600;margin:6px 0 3px">– Removed from party</div>
-        <div style="overflow-x:auto"><table class="detail-table"><tr>${vc.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>
-        <tr class="r-del">${vc.map(c=>`<td>${esc(String(p.rA[c]??''))}</td>`).join('')}</tr>
+    } else if (p.status === 'deleted') {
+      html += `<div style="font-size:10px;color:#a00;font-weight:600;margin:6px 0 3px">– Removed from party</div>
+        <div style="overflow-x:auto"><table class="detail-table"><tr>${vc.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
+        <tr class="r-del">${vc.map(c => `<td>${esc(String(p.rA[c] ?? ''))}</td>`).join('')}</tr>
         </table></div>`;
     }
   });
-  return html||'<p style="font-size:11px;color:#888;padding:6px">No changes within this party.</p>';
+
+  return html || '<p style="font-size:11px;color:#888;padding:6px">No changes within this party.</p>';
 }
 
-function toggleRef(rid){
-  const d=document.getElementById('det_'+rid);
-  const c=document.getElementById('chev_'+rid);
-  if(!d)return;
-  const open=d.style.display==='none'||!d.style.display;
-  d.style.display=open?'block':'none';
-  c.style.transform=open?'rotate(180deg)':'';
+function toggleRef(rid) {
+  const d = document.getElementById('det_' + rid);
+  const c = document.getElementById('chev_' + rid);
+  if (!d) return;
+
+  const open = d.style.display === 'none' || !d.style.display;
+  d.style.display = open ? 'block' : 'none';
+  if (c) c.style.transform = open ? 'rotate(180deg)' : '';
 }
 
-function doSearch(val){
-  const q=val.trim().toLowerCase();
-  document.querySelectorAll('#resultsList .ref-block').forEach(el=>{
-    const match=!q||el.dataset.ref.includes(q)||el.textContent.toLowerCase().includes(q);
-    el.style.display=match?'':'none';
+function doSearch(val) {
+  const q = val.trim().toLowerCase();
+
+  document.querySelectorAll('#resultsList .ref-block').forEach(el => {
+    const match = !q || el.dataset.ref.includes(q) || el.textContent.toLowerCase().includes(q);
+    el.style.display = match ? '' : 'none';
   });
 }
 
-function exportCSV(){
-  const rows=[['Reference','Status','Party A size','Party B size','Changes']];
-  allResults.forEach(r=>{
-    const ch=r.pairs?r.pairs.filter(p=>p.status!=='ok').length:0;
-    rows.push([r.ref,r.type,r.gA.length,r.gB.length,ch]);
+function exportCSV() {
+  const rows = [['Reference', 'Status', 'Party A size', 'Party B size', 'Changes']];
+
+  allResults.forEach(r => {
+    const ch = r.pairs ? r.pairs.filter(p => p.status !== 'ok').length : 0;
+    rows.push([r.ref, r.type, r.gA.length, r.gB.length, ch]);
   });
-  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  dl('booking_comparison.csv','text/csv',csv);
+
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  dl('booking_comparison.csv', 'text/csv', csv);
 }
 
-function exportXLSX(){
-  const wb2=XLSX.utils.book_new();
-  const sumData=[['Reference','Status','Party A','Party B','# Changes','Changed columns']];
-  allResults.forEach(r=>{
-    const ch=r.pairs?r.pairs.filter(p=>p.status!=='ok').length:0;
-    const cols=r.pairs?[...new Set(r.pairs.flatMap(p=>p.changed.map(c=>c.col)))].join(', '):'';
-    sumData.push([r.ref,r.type,r.gA.length,r.gB.length,ch,cols]);
-  });
-  XLSX.utils.book_append_sheet(wb2,XLSX.utils.aoa_to_sheet(sumData),'Summary');
-  const det=[['Reference','Row status','Column','Value in A','Value in B']];
-  allResults.forEach(r=>{
-    if(r.pairs)r.pairs.forEach(p=>{
-      p.changed.forEach(c=>det.push([r.ref,p.status,c.col,c.old,c.nw]));
-    });
-  });
-  XLSX.utils.book_append_sheet(wb2,XLSX.utils.aoa_to_sheet(det),'Details');
-  XLSX.writeFile(wb2,`booking_comparison_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
+function exportXLSX() {
+  const wb2 = XLSX.utils.book_new();
+  const sumData = [['Reference', 'Status', 'Party A', 'Party B', '# Changes', 'Changed columns']];
 
-function tryRestoreFileA(){
-  try{
-    const saved=localStorage.getItem('bookingComparatorFileA');
-    if(saved){
-      const parsed=JSON.parse(saved);
-      dataA=parsed.rows; fileAName=parsed.name;
-      rebuildHeaders();
-      document.getElementById('fileAStatus').textContent='✓ '+parsed.name+' loaded';
-      document.getElementById('fileAStatus').style.color='#107C10';
+  allResults.forEach(r => {
+    const ch = r.pairs ? r.pairs.filter(p => p.status !== 'ok').length : 0;
+    const cols = r.pairs ? [...new Set(r.pairs.flatMap(p => (p.changed || []).map(c => c.col)))].join(', ') : '';
+    sumData.push([r.ref, r.type, r.gA.length, r.gB.length, ch, cols]);
+  });
+
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(sumData), 'Summary');
+
+  const det = [['Reference', 'Row status', 'Column', 'Value in A', 'Value in B']];
+
+  allResults.forEach(r => {
+    if (r.pairs) {
+      r.pairs.forEach(p => {
+        (p.changed || []).forEach(c => det.push([r.ref, p.status, c.col, c.old, c.nw]));
+      });
     }
-  }catch(e){}
+  });
+
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(det), 'Details');
+  XLSX.writeFile(wb2, `booking_comparison_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-function handleStandaloneFile(side, input){
-  const f=input.files[0]; if(!f)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
+function handleStandaloneFile(side, input) {
+  const f = input.files[0];
+  if (!f) return;
+
+  const reader = new FileReader();
+
+  reader.onload = e => {
     let wb;
-    if(f.name.match(/\.csv$/i)){
-      wb=XLSX.read(e.target.result,{type:'string'});
-    } else {
-      wb=XLSX.read(e.target.result,{type:'array'});
+
+    try {
+      if (f.name.match(/\.csv$/i)) {
+        wb = XLSX.read(e.target.result, { type: 'string' });
+      } else {
+        wb = XLSX.read(e.target.result, { type: 'array' });
+      }
+
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = sheetToRows(ws);
+
+      if (side === 'A') {
+        dataA = rows;
+        fileAName = f.name;
+        saveFileA(rows, f.name, '', '');
+        setText('fileAStatus', '✓ ' + f.name);
+        const st = document.getElementById('fileAStatus');
+        if (st) st.style.color = '#107C10';
+        show('resetBtnStandalone');
+      } else {
+        dataB = rows;
+        fileBName = f.name;
+        setText('fileBStatus', '✓ ' + f.name);
+        const st = document.getElementById('fileBStatus');
+        if (st) st.style.color = '#107C10';
+      }
+
+      rebuildHeaders();
+
+      if (dataA.length && dataB.length) {
+        populateConfig();
+        show('standaloneConfig');
+      }
+    } catch (err) {
+      alert('Could not read file. ' + (err && err.message ? err.message : err));
     }
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
-    if(side==='A'){
-      dataA=rows; fileAName=f.name;
-      try{localStorage.setItem('bookingComparatorFileA',JSON.stringify({rows,name:f.name}));}catch(e){}
-      document.getElementById('fileAStatus').textContent='✓ '+f.name;
-      document.getElementById('fileAStatus').style.color='#107C10';
-    } else {
-      dataB=rows; fileBName=f.name;
-      document.getElementById('fileBStatus').textContent='✓ '+f.name;
-      document.getElementById('fileBStatus').style.color='#107C10';
-    }
-    rebuildHeaders();
-    if(dataA.length&&dataB.length) document.getElementById('standaloneConfig').style.display='block';
   };
-  if(f.name.match(/\.csv$/i)) reader.readAsText(f);
+
+  if (f.name.match(/\.csv$/i)) reader.readAsText(f);
   else reader.readAsArrayBuffer(f);
 }
 
-function resetFileA(){
-  dataA=[]; fileAName=''; allHeaders=[];
-  try{localStorage.removeItem('bookingComparatorFileA');}catch(e){}
-  document.getElementById('fileALoaded').style.display='none';
-  document.getElementById('resetBtn').style.display='none';
-  document.getElementById('card1').classList.remove('loaded');
-  document.getElementById('num1').classList.remove('done');
-  document.getElementById('sub1').style.display='block';
-  document.getElementById('attListA').innerHTML='';
-  document.getElementById('emailInfoA').style.display='none';
-  document.getElementById('card3').style.display='none';
-  document.getElementById('resultsArea').style.display='none';
-  loadCurrentItem();
+function resetFileA() {
+  dataA = [];
+  dataB = [];
+  fileAName = '';
+  fileBName = '';
+  allHeaders = [];
+  allResults = [];
+  currentRefCol = '';
+  currentNameCol = '';
+
+  try {
+    sessionStorage.removeItem(STORE_KEY);
+    localStorage.removeItem(STORE_KEY);
+  } catch (e) {}
+
+  [
+    'fileALoaded', 'fileBLoaded', 'card3', 'resultsArea',
+    'emailInfoA', 'emailInfoB', 'noAttA', 'noAttB',
+    'resetBtn', 'resetBtnStandalone', 'standaloneConfig'
+  ].forEach(hide);
+
+  const card1 = document.getElementById('card1');
+  const card2 = document.getElementById('card2');
+  if (card1) card1.classList.remove('loaded');
+  if (card2) card2.classList.remove('loaded');
+
+  const num1 = document.getElementById('num1');
+  const num2 = document.getElementById('num2');
+  if (num1) num1.classList.remove('done');
+  if (num2) num2.classList.remove('done');
+
+  show('sub1');
+
+  const attListA = document.getElementById('attListA');
+  const attListB = document.getElementById('attListB');
+  if (attListA) attListA.innerHTML = '';
+  if (attListB) attListB.innerHTML = '';
+
+  setText('fileAStatus', '');
+  setText('fileBStatus', '');
+
+  if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox) {
+    loadCurrentItem();
+  }
 }
 
-function dl(name,mime,content){
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
-  a.download=name;a.click();
+function dl(name, mime, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = name;
+  a.click();
 }
 </script>
 </body>
