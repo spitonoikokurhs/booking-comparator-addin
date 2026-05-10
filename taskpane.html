@@ -101,6 +101,30 @@ select.cfg-sel{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px
 <h1>📋 Booking Comparator</h1>
 <p class="sub">Open an email → load its attachment → switch emails → load second → compare.</p>
 
+<div id="standaloneMode" style="display:none">
+  <div style="background:#fff3dc;border:1px solid #e6a817;border-radius:6px;padding:8px 10px;font-size:11px;color:#7a4f00;margin-bottom:10px">
+    📂 Running in standalone mode — upload files directly below.
+  </div>
+  <div style="margin-bottom:8px">
+    <div style="font-size:12px;font-weight:600;margin-bottom:4px">File A — original list</div>
+    <input type="file" accept=".xlsx,.xls,.csv" onchange="handleStandaloneFile('A',this)" style="font-size:12px;width:100%">
+    <div id="fileAStatus" style="font-size:11px;margin-top:3px;color:#888"></div>
+  </div>
+  <div style="margin-bottom:10px">
+    <div style="font-size:12px;font-weight:600;margin-bottom:4px">File B — updated list</div>
+    <input type="file" accept=".xlsx,.xls,.csv" onchange="handleStandaloneFile('B',this)" style="font-size:12px;width:100%">
+    <div id="fileBStatus" style="font-size:11px;margin-top:3px;color:#888"></div>
+  </div>
+  <div id="standaloneConfig" style="display:none">
+    <div style="font-size:11px;color:#555;margin-bottom:3px;font-weight:500">Reference column</div>
+    <select class="cfg-sel" id="refColS"></select>
+    <div style="font-size:11px;color:#555;margin-bottom:3px;font-weight:500">Name column (optional)</div>
+    <select class="cfg-sel" id="nameColS"><option value="">— none —</option></select>
+    <button class="cmp-btn" onclick="runStandaloneCompare()">Compare bookings</button>
+  </div>
+</div>
+
+<div id="outlookMode" style="display:none">
 <!-- STEP 1 -->
 <div class="step-card" id="card1">
   <div class="step-header">
@@ -146,6 +170,7 @@ select.cfg-sel{width:100%;font-size:12px;border:1px solid #ccc;border-radius:5px
   <button class="cmp-btn" id="cmpBtn" onclick="runCompare()">Compare bookings</button>
 </div>
 
+</div><!-- end outlookMode -->
 <div class="msg" id="loadMsg"><span class="spinner"></span> Loading attachment…</div>
 
 <div id="resultsArea" style="display:none">
@@ -168,7 +193,18 @@ let dataA=[], dataB=[], allHeaders=[], allResults=[];
 let fileAName='', fileBName='';
 let currentItem=null;
 
-Office.onReady(info=>{
+// Handle both Outlook and standalone browser mode
+function initApp(){
+  if(typeof Office==='undefined'||!Office.context||!Office.context.mailbox){
+    // Standalone browser mode — show file upload fallback
+    document.getElementById('outlookMode').style.display='none';
+    document.getElementById('standaloneMode').style.display='block';
+    tryRestoreFileA();
+    return;
+  }
+  document.getElementById('outlookMode').style.display='block';
+  document.getElementById('standaloneMode').style.display='none';
+  Office.onReady(info=>{
   if(info.host===Office.HostType.Outlook){
     // Restore File A from localStorage if it exists
     try{
@@ -193,7 +229,15 @@ Office.onReady(info=>{
     );
     loadCurrentItem();
   }
-});
+  });
+}
+
+// Try to init with Office, fallback if it fails
+if(typeof Office!=='undefined'){
+  Office.onReady(()=>{ initApp(); });
+} else {
+  window.addEventListener('load', initApp);
+}
 
 function onItemChanged(){ loadCurrentItem(); }
 
@@ -295,6 +339,22 @@ function rebuildHeaders(){
 }
 
 function populateConfig(){
+  // Also fill standalone selects if visible
+  const refS=document.getElementById('refColS');
+  const nameS=document.getElementById('nameColS');
+  if(refS){
+    const gR=guess(allHeaders,['ref','reference','booking','id','code','res','voucher']);
+    const gN=guess(allHeaders,['name','passenger','pax','guest','client']);
+    refS.innerHTML=''; nameS.innerHTML='<option value="">— none —</option>';
+    allHeaders.forEach(h=>{
+      const o1=document.createElement('option');o1.value=h;o1.textContent=h;if(h===gR)o1.selected=true;refS.appendChild(o1);
+      const o2=document.createElement('option');o2.value=h;o2.textContent=h;if(h===gN)o2.selected=true;nameS.appendChild(o2);
+    });
+  }
+  // Original selects
+  populateConfig_orig();
+}
+function populateConfig_orig(){
   rebuildHeaders();
   const refSel=document.getElementById('refCol');
   const nameSel=document.getElementById('nameCol');
@@ -338,9 +398,19 @@ function diffCells(rA,rB){
   return ch;
 }
 
+function runStandaloneCompare(){
+  const refCol=document.getElementById('refColS').value;
+  const nameCol=document.getElementById('nameColS').value;
+  runCompareWithCols(refCol,nameCol);
+}
+
 function runCompare(){
   const refCol=document.getElementById('refCol').value;
   const nameCol=document.getElementById('nameCol').value;
+  runCompareWithCols(refCol,nameCol);
+}
+
+function runCompareWithCols(refCol,nameCol){
   if(!refCol){alert('Select a reference column first.');return;}
 
   const gA=groupBy(dataA,refCol);
@@ -525,6 +595,48 @@ function exportXLSX(){
   });
   XLSX.utils.book_append_sheet(wb2,XLSX.utils.aoa_to_sheet(det),'Details');
   XLSX.writeFile(wb2,`booking_comparison_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function tryRestoreFileA(){
+  try{
+    const saved=localStorage.getItem('bookingComparatorFileA');
+    if(saved){
+      const parsed=JSON.parse(saved);
+      dataA=parsed.rows; fileAName=parsed.name;
+      rebuildHeaders();
+      document.getElementById('fileAStatus').textContent='✓ '+parsed.name+' loaded';
+      document.getElementById('fileAStatus').style.color='#107C10';
+    }
+  }catch(e){}
+}
+
+function handleStandaloneFile(side, input){
+  const f=input.files[0]; if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let wb;
+    if(f.name.match(/\.csv$/i)){
+      wb=XLSX.read(e.target.result,{type:'string'});
+    } else {
+      wb=XLSX.read(e.target.result,{type:'array'});
+    }
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+    if(side==='A'){
+      dataA=rows; fileAName=f.name;
+      try{localStorage.setItem('bookingComparatorFileA',JSON.stringify({rows,name:f.name}));}catch(e){}
+      document.getElementById('fileAStatus').textContent='✓ '+f.name;
+      document.getElementById('fileAStatus').style.color='#107C10';
+    } else {
+      dataB=rows; fileBName=f.name;
+      document.getElementById('fileBStatus').textContent='✓ '+f.name;
+      document.getElementById('fileBStatus').style.color='#107C10';
+    }
+    rebuildHeaders();
+    if(dataA.length&&dataB.length) document.getElementById('standaloneConfig').style.display='block';
+  };
+  if(f.name.match(/\.csv$/i)) reader.readAsText(f);
+  else reader.readAsArrayBuffer(f);
 }
 
 function resetFileA(){
